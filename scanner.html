@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#E65100">
+  <title>QR/Barcode Scanner — Stock Count System</title>
+
+  <!-- html5-qrcode library — รองรับทั้ง QR และ Barcode -->
+  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Sarabun', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #000000 0%, #1A1A1A 100%);
+      min-height: 100vh;
+      min-height: 100dvh;
+      color: #fff;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .header {
+      background: #000;
+      color: #fff;
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .header-title {
+      font-weight: 700;
+      font-size: 16px;
+      flex: 1;
+    }
+
+    .header-subtitle {
+      font-size: 11px;
+      color: #aaa;
+      margin-top: 2px;
+    }
+
+    .btn-back {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 14px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .btn-back:hover { background: rgba(255, 255, 255, 0.2); }
+
+    .container {
+      padding: 16px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .scanner-wrap {
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 16px;
+      min-height: 300px;
+      position: relative;
+    }
+
+    #qr-reader {
+      width: 100%;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
+    .status {
+      text-align: center;
+      padding: 16px;
+      background: #fff;
+      color: #333;
+      border-radius: 12px;
+      margin-bottom: 16px;
+      font-size: 14px;
+    }
+
+    .status-success { background: #E8F5E9; color: #2E7D32; }
+    .status-error { background: #FFEBEE; color: #C62828; }
+    .status-info { background: #FFF3E0; color: #E65100; font-weight: 600; }
+
+    .button-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .btn {
+      padding: 14px 16px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 15px;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: #E65100;
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(230, 81, 0, 0.4);
+    }
+    .btn-primary:hover { background: #BF360C; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-ghost {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+    .btn-ghost:hover { background: rgba(255, 255, 255, 0.2); }
+
+    .manual-input-box {
+      background: #fff;
+      color: #333;
+      border-radius: 12px;
+      padding: 16px;
+      margin-top: 16px;
+    }
+
+    .manual-input-box label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #555;
+    }
+
+    .manual-input-box input {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #E0E0E0;
+      border-radius: 8px;
+      font-size: 16px;
+      font-family: inherit;
+    }
+
+    .manual-input-box input:focus {
+      outline: none;
+      border-color: #E65100;
+    }
+
+    .help-text {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 12px;
+      color: #ccc;
+      margin-top: 16px;
+      line-height: 1.6;
+    }
+
+    .footer {
+      text-align: center;
+      padding: 24px 16px;
+      color: #666;
+      font-size: 11px;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .scanning-indicator {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background: #4ADE80;
+      border-radius: 50%;
+      margin-right: 6px;
+      animation: pulse 1s infinite;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="header">
+    <button type="button" class="btn-back" onclick="goBack()">← ยกเลิก</button>
+    <div style="flex:1; min-width:0;">
+      <div class="header-title" id="headerTitle">📷 สแกน</div>
+      <div class="header-subtitle" id="headerSubtitle">รอเปิดกล้อง...</div>
+    </div>
+  </header>
+
+  <div class="container">
+
+    <div id="status" class="status status-info">
+      👆 กดปุ่ม "เริ่มกล้อง" ด้านล่าง
+    </div>
+
+    <div class="scanner-wrap">
+      <div id="qr-reader"></div>
+    </div>
+
+    <div class="button-row">
+      <button type="button" id="btnStart" class="btn btn-primary" onclick="startScanner()">📷 เริ่มกล้อง</button>
+      <button type="button" id="btnStop" class="btn btn-ghost" onclick="stopScanner()" disabled>⏸️ หยุด</button>
+    </div>
+
+    <div class="manual-input-box">
+      <label>หรือพิมพ์รหัสเอง (ถ้ากล้องไม่เปิด):</label>
+      <input type="text" id="manualInput" placeholder="พิมพ์รหัส แล้วกด Enter" autocomplete="off">
+      <button type="button" class="btn btn-primary" style="margin-top:12px; width:100%;" onclick="submitManual()">✓ ใช้รหัสนี้</button>
+    </div>
+
+    <div class="help-text">
+      💡 <strong>วิธีใช้:</strong><br>
+      1. กดปุ่ม "เริ่มกล้อง"<br>
+      2. Browser ขอ permission → กด "Allow"<br>
+      3. เล็งกล้องที่ QR/Barcode<br>
+      4. ระบบจะส่งค่ากลับให้แอปอัตโนมัติ
+    </div>
+
+    <div class="footer">
+      Stock Count System Scanner · Infinite Textile
+    </div>
+  </div>
+
+  <script>
+    // ========================================
+    // Configuration
+    // ========================================
+
+    var STORAGE_KEY = 'sc_scanner_result';
+
+    // Parse URL parameters
+    var params = new URLSearchParams(window.location.search);
+    var SCAN_TYPE = params.get('type') || 'qr';   // 'qr' | 'barcode'
+    var RETURN_URL = params.get('return') || '';
+    var REQUEST_ID = params.get('rid') || ('req_' + new Date().getTime());
+
+    // Update header
+    if (SCAN_TYPE === 'barcode') {
+      document.getElementById('headerTitle').textContent = '📷 สแกน Barcode สินค้า';
+      document.getElementById('headerSubtitle').textContent = 'เล็งกล้องที่ barcode';
+    } else {
+      document.getElementById('headerTitle').textContent = '📷 สแกน QR พื้นที่';
+      document.getElementById('headerSubtitle').textContent = 'เล็งกล้องที่ QR Code';
+    }
+
+    // ========================================
+    // Scanner state
+    // ========================================
+
+    var html5QrcodeScanner = null;
+    var scanning = false;
+
+    function setStatus(msg, type) {
+      var s = document.getElementById('status');
+      s.textContent = msg;
+      s.className = 'status status-' + (type || 'info');
+    }
+
+    function startScanner() {
+      var reader = document.getElementById('qr-reader');
+      reader.innerHTML = '';
+
+      try {
+        html5QrcodeScanner = new Html5Qrcode('qr-reader');
+      } catch (e) {
+        setStatus('❌ ไม่สามารถสร้าง scanner: ' + e.message, 'error');
+        return;
+      }
+
+      // Config — ปรับ qrbox ตาม type
+      var config;
+      if (SCAN_TYPE === 'barcode') {
+        config = {
+          fps: 10,
+          qrbox: { width: 300, height: 100 },  // กว้างสำหรับ barcode 1D
+          aspectRatio: 1.5,
+        };
+      } else {
+        config = {
+          fps: 10,
+          qrbox: { width: 250, height: 250 },  // สี่เหลี่ยมสำหรับ QR
+          aspectRatio: 1.0,
+        };
+      }
+
+      setStatus('⏳ กำลังเปิดกล้อง...', 'info');
+
+      html5QrcodeScanner.start(
+        { facingMode: 'environment' },  // กล้องหลัง
+        config,
+        onScanSuccess,
+        onScanFailure
+      ).then(function() {
+        scanning = true;
+        document.getElementById('btnStart').disabled = true;
+        document.getElementById('btnStop').disabled = false;
+        setStatus('🟢 กำลังสแกน — เล็งที่โค้ด', 'info');
+      }).catch(function(err) {
+        console.error('Scanner start failed:', err);
+        var msg = 'ไม่สามารถเปิดกล้อง';
+        if (err && err.name === 'NotAllowedError') {
+          msg = '❌ กรุณา allow camera permission ใน browser settings';
+        } else if (err && err.name === 'NotFoundError') {
+          msg = '❌ ไม่พบกล้องในเครื่องนี้';
+        } else if (err) {
+          msg = '❌ ' + (err.message || String(err));
+        }
+        setStatus(msg, 'error');
+      });
+    }
+
+    function stopScanner() {
+      if (html5QrcodeScanner && scanning) {
+        html5QrcodeScanner.stop().then(function() {
+          scanning = false;
+          document.getElementById('btnStart').disabled = false;
+          document.getElementById('btnStop').disabled = true;
+          setStatus('⏸️ หยุดสแกนแล้ว', 'info');
+        }).catch(function(err) { console.error('Stop error:', err); });
+      }
+    }
+
+    function onScanSuccess(decodedText, decodedResult) {
+      if (!scanning) return;
+      scanning = false;
+      setStatus('✅ สแกนสำเร็จ: ' + decodedText, 'success');
+      sendResult(decodedText);
+    }
+
+    function onScanFailure(error) {
+      // Ignore — เกิดทุก frame ที่ยังไม่เจอโค้ด
+    }
+
+    function submitManual() {
+      var val = (document.getElementById('manualInput').value || '').trim();
+      if (!val) return alert('กรุณาพิมพ์รหัส');
+      setStatus('✅ ใช้รหัสที่พิมพ์: ' + val, 'success');
+      sendResult(val);
+    }
+
+    // Enter key in manual input
+    document.getElementById('manualInput').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') submitManual();
+    });
+
+    // ========================================
+    // Send result back to Counter App
+    // ========================================
+
+    function sendResult(value) {
+      // Stop scanner first
+      try { if (html5QrcodeScanner && scanning) html5QrcodeScanner.stop(); } catch (e) {}
+
+      var result = {
+        request_id: REQUEST_ID,
+        type: SCAN_TYPE,
+        value: value,
+        timestamp: new Date().getTime(),
+      };
+
+      // Method 1: localStorage (cross-tab fallback)
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(result));
+      } catch (e) { console.warn('localStorage failed:', e); }
+
+      // Method 2: redirect กลับ return URL พร้อม hash
+      if (RETURN_URL) {
+        var separator = RETURN_URL.indexOf('#') >= 0 ? '&' : '#';
+        var redirectUrl = RETURN_URL + separator +
+          'scanned=' + encodeURIComponent(value) +
+          '&type=' + encodeURIComponent(SCAN_TYPE) +
+          '&rid=' + encodeURIComponent(REQUEST_ID);
+
+        // Delay เล็กน้อย เพื่อให้ user เห็น success message
+        setTimeout(function() {
+          window.location.href = redirectUrl;
+        }, 600);
+      } else {
+        // ไม่มี return URL — แสดงค่าให้ user copy เอง
+        setStatus('✅ ' + value + ' (กรุณากลับไปแอป)', 'success');
+      }
+    }
+
+    function goBack() {
+      // ส่งสัญญาณยกเลิก
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+          request_id: REQUEST_ID,
+          cancelled: true,
+          timestamp: new Date().getTime(),
+        }));
+      } catch (e) {}
+
+      if (RETURN_URL) {
+        var separator = RETURN_URL.indexOf('#') >= 0 ? '&' : '#';
+        window.location.href = RETURN_URL + separator + 'scanned_cancelled=1&rid=' + encodeURIComponent(REQUEST_ID);
+      } else {
+        window.history.back();
+      }
+    }
+
+    // Cleanup on close
+    window.addEventListener('beforeunload', function() {
+      if (scanning && html5QrcodeScanner) {
+        try { html5QrcodeScanner.stop(); } catch (e) {}
+      }
+    });
+
+    // Auto-focus manual input on first interaction (mobile keyboard friendly)
+    document.getElementById('manualInput').addEventListener('focus', function() {
+      this.select();
+    });
+  </script>
+
+</body>
+</html>
