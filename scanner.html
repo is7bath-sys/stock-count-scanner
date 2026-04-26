@@ -377,12 +377,12 @@
         localStorage.setItem(STORAGE_KEY, JSON.stringify(result));
       } catch (e) { console.warn('localStorage failed:', e); }
 
-      // Method 2: redirect กลับ return URL พร้อม hash
+      // Method 2: redirect กลับ return URL พร้อม query string (GAS pass through doGet)
       if (RETURN_URL) {
-        var separator = RETURN_URL.indexOf('#') >= 0 ? '&' : '#';
+        var separator = RETURN_URL.indexOf('?') >= 0 ? '&' : '?';
         var redirectUrl = RETURN_URL + separator +
           'scanned=' + encodeURIComponent(value) +
-          '&type=' + encodeURIComponent(SCAN_TYPE) +
+          '&scan_type=' + encodeURIComponent(SCAN_TYPE) +
           '&rid=' + encodeURIComponent(REQUEST_ID);
 
         // Delay เล็กน้อย เพื่อให้ user เห็น success message
@@ -406,7 +406,7 @@
       } catch (e) {}
 
       if (RETURN_URL) {
-        var separator = RETURN_URL.indexOf('#') >= 0 ? '&' : '#';
+        var separator = RETURN_URL.indexOf('?') >= 0 ? '&' : '?';
         window.location.href = RETURN_URL + separator + 'scanned_cancelled=1&rid=' + encodeURIComponent(REQUEST_ID);
       } else {
         window.history.back();
